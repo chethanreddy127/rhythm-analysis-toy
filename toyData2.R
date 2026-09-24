@@ -1,7 +1,7 @@
 library(ggplot2)
 
 
-# Creating ground truth dataset
+### Creating ground truth dataset ----
 
 n_genes <- 1000
 
@@ -68,6 +68,8 @@ geneList$acrophase[isRhythmic] <- runif(
   min = 0,
   max = 24
 )
+
+# Creating time series data ----
 timeSeries = data.frame(gene_name = geneList$gene_name, matrix(nrow = 1000, ncol = 12))
 sample_by_4 = seq(4, 48, by = 4)
 colnames(timeSeries)[2:13] = paste0("t", sample_by_4)
@@ -100,6 +102,8 @@ rhythmicGenes = data.frame(
   acrophase = rep(0,1000),
   rhythmic = rep(NA, 1000)
 )
+
+### Creating nested models and performing significance testing ----
 
 # for each gene, create an array of time and expression values and create reduced and full models, then LRF, store p val in rhythmicGenes table
 
@@ -162,6 +166,8 @@ rhythmicGenes$rhythmic <- ifelse(
   "n"
 )
 
+### Looking at which genes agree/disagree between empiric derivation and ground truth ----
+
 compare <- merge(
   rhythmicGenes[, c("gene_name", "rhythmic")],
   geneList[, c("gene_name", "rhythmic")],
@@ -178,9 +184,8 @@ colnames(compare) <- c(
 agree = subset(compare, empirical_rhythmic == ground_truth_rhythmic)
 disagree = subset(compare, empirical_rhythmic != ground_truth_rhythmic)
 
-# ------------------------------------------------------------
-# 5. Plot gene groups
-# ------------------------------------------------------------
+
+### Plot gene groups ----
 
 first_rhythmic <- geneList$gene_name[
   geneList$rhythmic == "y"
