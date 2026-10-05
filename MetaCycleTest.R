@@ -113,4 +113,28 @@ rhythmicGenes = data.frame(
 
 
 metaTest <- meta2d(infile = "MetaCycle Analysis", filestyle = "csv", timepoints = sample_by_x, outputFile = FALSE, inDF = timeSeries)
+metaTest <- as.data.frame(sort(metaTest$JTK, by = "BH.Q"))
 rainTest <- rain(t(timeSeries[, -1]), deltat = x, period = 24, adjp.method = "BH", peak.border = c(0.2, 0.8), verbose = TRUE)
+
+rainTest <- as.data.frame(sort(rainTest, by = "pVal"))
+
+# Create a table comparing the cycling transcripts from MetaCycle to the ground truth dataset
+metaTest$rhythmic[subset(metaTest, metaTest$BH.Q < 0.3)] = "y" 
+metaTest$rhythmic[subset(metaTest, metaTest$BH.Q >= 0.3)] = "n"
+
+compare.meta <- merge(metaTest, geneList, by = "gene_name", all.x = TRUE)
+if(metaTest$rhythmicity == "y" && geneList$rhythmic == "y") {
+  compare.meta$correct[compare.meta$gene_name] = "true positive"
+} else if (metaTest$rhythmicity == "y" && geneList$rhythmic == "n") {
+  compare.meta$correct[compare.meta$gene_name] = "false positive"
+} else if (metaTest$rhythmicity == "n" && geneList$rhythmic == "y") {
+  compare.meta$correct[compare.meta$gene_name] = "false negative"
+} else if (metaTest$rhythmicity == "n" && geneList$rhythmic == "n") {
+  compare.meta$correct[compare.meta$gene_name] = "true negative"
+}
+
+sum(compare.meta$correct == "true positive")
+sum(compare.meta$correct == "false positive")
+sum(compare.meta$correct == "false negative")
+sum(compare.meta$correct == "true negative")
+
