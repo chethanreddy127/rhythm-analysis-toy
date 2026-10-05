@@ -153,3 +153,6 @@ analyze.by.x <- function(x) {
   return(list(compare.meta, summaryAgreement.meta))
 }
 
+result8 <- analyze.by.x(8)
+result4 <- analyze.by.x(4)
+result2 <- analyze.by.x(2)
