@@ -1,6 +1,8 @@
 library(ggplot2)
 devtools::install_github('gangwug/MetaCycle')
 library(MetaCycle)
+install.packages('rain', repos = c('https://bioc.r-universe.dev', 'https://cloud.r-project.org'))
+library(rain)
 
 ### Creating ground truth dataset ----
 
@@ -72,11 +74,12 @@ geneList$acrophase[isRhythmic] <- runif(
 # Creating Time Series data ----
 
 timeSeries = data.frame(gene_name = geneList$gene_name, matrix(nrow = 1000, ncol = 12))
-sample_by_4 = seq(4, 48, by = 4)
-colnames(timeSeries)[2:13] = paste0("t", sample_by_4)
+x = 4
+sample_by_x = seq(4, 48, by = x)
+colnames(timeSeries)[2:13] = paste0("t", sample_by_x)
 
 generateTimeData <- function(gene_index) {
-  time_points = sample_by_4
+  time_points = sample_by_x
   
   
   MESOR <- geneList$meanExpr[gene_index]
@@ -109,4 +112,5 @@ rhythmicGenes = data.frame(
 ### Creating nested models and performing significance testing ----
 
 
-metaTest <- meta2d(infile = "MetaCycle Analysis", filestyle = "csv", timepoints = sample_by_4, outputFile = FALSE, inDF = timeSeries)
+metaTest <- meta2d(infile = "MetaCycle Analysis", filestyle = "csv", timepoints = sample_by_x, outputFile = FALSE, inDF = timeSeries)
+rainTest <- rain(t(timeSeries[, -1]), deltat = x, period = 24, adjp.method = "BH", peak.border = c(0.2, 0.8), verbose = TRUE)
