@@ -1,4 +1,5 @@
 library(ggplot2)
+library(dplyr)
 devtools::install_github('gangwug/MetaCycle')
 library(MetaCycle)
 install.packages('rain', repos = c('https://bioc.r-universe.dev', 'https://cloud.r-project.org'))
@@ -112,26 +113,42 @@ rhythmicGenes = data.frame(
 ### Creating nested models and performing significance testing ----
 
 
-metaTest <- meta2d(infile = "MetaCycle Analysis", filestyle = "csv", timepoints = sample_by_x, outputFile = FALSE, inDF = timeSeries)
-metaTest <- as.data.frame(sort(metaTest$JTK, by = "BH.Q"))
-rainTest <- rain(t(timeSeries[, -1]), deltat = x, period = 24, adjp.method = "BH", peak.border = c(0.2, 0.8), verbose = TRUE)
+metaTest <- meta2d(infile = "MetaCycle Analysis", 
+                   filestyle = "csv", 
+                   timepoints = sample_by_x, 
+                   outputFile = FALSE, 
+                   inDF = timeSeries
+                   )
+JTK.results <- metaTest$JTK[order(metaTest$JTK$BH.Q),
+                            ,
+                            drop = FALSE
+                            ]
+rainTest <- rain(t(timeSeries[, -1]), 
+                 deltat = x, period = 24, 
+                 adjp.method = "BH", 
+                 peak.border = c(0.2, 0.8), 
+                 verbose = TRUE
+                 )
 
-rainTest <- as.data.frame(sort(rainTest, by = "pVal"))
 
 # Create a table comparing the cycling transcripts from MetaCycle to the ground truth dataset
-metaTest$rhythmic[subset(metaTest, metaTest$BH.Q < 0.3)] = "y" 
-metaTest$rhythmic[subset(metaTest, metaTest$BH.Q >= 0.3)] = "n"
+JTK.results$rhythmic[JTK.results$BH.Q < 0.3] = "y" 
+JTK.results$rhythmic[JTK.results$BH.Q >= 0.3] = "n"
 
-compare.meta <- merge(metaTest, geneList, by = "gene_name", all.x = TRUE)
-if(metaTest$rhythmicity == "y" && geneList$rhythmic == "y") {
-  compare.meta$correct[compare.meta$gene_name] = "true positive"
-} else if (metaTest$rhythmicity == "y" && geneList$rhythmic == "n") {
-  compare.meta$correct[compare.meta$gene_name] = "false positive"
-} else if (metaTest$rhythmicity == "n" && geneList$rhythmic == "y") {
-  compare.meta$correct[compare.meta$gene_name] = "false negative"
-} else if (metaTest$rhythmicity == "n" && geneList$rhythmic == "n") {
-  compare.meta$correct[compare.meta$gene_name] = "true negative"
-}
+compare.meta <- merge(JTK.results, geneList, by.x = "CycID", by.y = "gene_name", all.x = TRUE) %>%
+  dplyr::select(CycID, BH.Q, rhythmic.x, rhythmic.y, PER, LAG, AMP, meanExpr, amplitude, acrophase) %>%
+  dplyr::rename(JTK.rhythmic = rhythmic.x, ground_truth_rhythmic = rhythmic.y)
+
+compare.meta <- compare.meta %>%
+  dplyr::mutate(
+    JTK.rhythmic = ifelse(BH.Q < 0.3, "y", "n"),
+    correct = dplyr::case_when(
+      JTK.rhythmic == "y" & ground_truth_rhythmic == "y" ~ "true positive",
+      JTK.rhythmic == "y" & ground_truth_rhythmic == "n" ~ "false positive",
+      JTK.rhythmic == "n" & ground_truth_rhythmic == "y" ~ "false negative",
+      JTK.rhythmic == "n" & ground_truth_rhythmic == "n" ~ "true negative"
+    )
+  )
 
 sum(compare.meta$correct == "true positive")
 sum(compare.meta$correct == "false positive")
